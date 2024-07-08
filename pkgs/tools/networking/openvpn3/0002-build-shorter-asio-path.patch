@@ -1,0 +1,26 @@
+From 190f388b44fb7368977c64428fa35f3946bcc4dd Mon Sep 17 00:00:00 2001
+From: Petr Portnov <me@progrm-jarvis.ru>
+Date: Mon, 8 Jul 2024 00:06:01 +0300
+Subject: [PATCH] build: shorter asio path
+
+Signed-off-by: Petr Portnov <me@progrm-jarvis.ru>
+---
+ meson.build | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/meson.build b/meson.build
+index 2bba337..092b4ce 100644
+--- a/meson.build
++++ b/meson.build
+@@ -68,7 +68,7 @@ endif
+ #
+ #  Setup additional include header dirs
+ #
+-asio_inc = get_option('asio_path') / 'asio' / 'include'
++asio_inc = get_option('asio_path') / 'include'
+ message ('ASIO library: ' + asio_inc)
+ 
+ openvpn3_core_inc = get_option('openvpn3_core_path')
+-- 
+2.45.1
+

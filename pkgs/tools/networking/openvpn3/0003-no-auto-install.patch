@@ -1,0 +1,63 @@
+diff --git a/meson.build b/meson.build
+index 092b4ce..068f1a1 100644
+--- a/meson.build
++++ b/meson.build
+@@ -180,8 +180,18 @@ message('OpenVPN 3 Linux service binary directory: ' + get_option('prefix') / li
+ 
+ #
+ #  D-Bus configuration
+-dbus_policy_dir = dep_dbus.get_variable('datadir') / 'dbus-1' / 'system.d'
+-dbus_service_dir = dep_dbus.get_variable('system_bus_services_dir')
++dbus_policy_dir = get_option('dbuspolicydir')
++if dbus_policy_dir == ''
++    dbus_policy_dir = dep_dbus.get_variable('datadir') / 'dbus-1' / 'system.d'
++endif
++
++message('\n\n\nDBUS_POLICY_DIR=', dbus_policy_dir, '\n\n\n')
++dbus_service_dir = get_option('dbussystemservicedir')
++if dbus_service_dir == ''
++    dbus_service_dir = dep_dbus.get_variable('system_bus_services_dir')
++endif
++message('\n\n\nDBUS_SERVICE_DIR=', dbus_service_dir, '\n\n\n')
++
+ dbus_config = {
+     'OPENVPN_USERNAME': get_option('openvpn_username'),
+     'LIBEXEC_PATH': get_option('prefix') / libexec_dir,
+@@ -285,7 +295,7 @@ configure_file(
+     input: 'src/policy/net.openvpn.v3.conf.in',
+     output: 'net.openvpn.v3.conf',
+     configuration: configuration_data(dbus_config),
+-    install: true,
++    install: true, # TODO: pportnov
+     install_dir: dbus_policy_dir,
+ )
+ 
+diff --git a/meson_options.txt b/meson_options.txt
+index e9e759e..ac73bc3 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -81,6 +81,14 @@ option('use-legacy-polkit-pkla', type: 'feature', value: 'disabled',
+ option('polkit_pkla_rulesdir', type: 'string', value: '',
+        description: 'Override PolicyKit PKLA rules directory')
+ 
++#
++# DBus-specific paths
++#
++option('dbuspolicydir', type: 'string',
++       description: 'D-Bus policy directory')
++option('dbussystemservicedir', type: 'string',
++       description: 'D-Bus system service directory')
++
+ #
+ #  Testing tools
+ #
+diff --git a/src/configmgr/meson.build b/src/configmgr/meson.build
+index 5d0a649..b534817 100644
+--- a/src/configmgr/meson.build
++++ b/src/configmgr/meson.build
+@@ -55,4 +55,4 @@ configure_file(
+ # Create the configs directory for persistent configuration profiles
+ # NOTE: Can be replaced with install_emptydir() when Meson 0.60 or newer
+ #       is available on all supported distros
+-meson.add_install_script('sh','-c', 'mkdir -p $DESTDIR@0@'.format(openvpn3_statedir / 'configs'))
++# meson.add_install_script('sh','-c', 'mkdir -p $DESTDIR@0@'.format(openvpn3_statedir / 'configs'))
