@@ -16171,6 +16171,12 @@
     githubId = 74465;
     name = "James Fargher";
   };
+  progrm_jarvis = {
+    email = "mrjarviscraft+nix@gmail.com";
+    github = "JarvisCraft";
+    githubId = 7693005;
+    name = "Petr Portnov";
+  };
   progval = {
     email = "progval+nix@progval.net";
     github = "progval";
