@@ -1,5 +1,37 @@
+diff --git a/distro/systemd/meson.build b/distro/systemd/meson.build
+index 36d556c..d82c625 100644
+--- a/distro/systemd/meson.build
++++ b/distro/systemd/meson.build
+@@ -15,12 +15,17 @@ systemd_cfg = configuration_data({
+ 
+ systemd_service_cfg = dependency('systemd')
+ 
++systemd_system_unit_dir = get_option('systemdsystemunitdir')
++if systemd_system_unit_dir == ''
++  systemd_system_unit_dir = systemd_service_cfg.get_variable('systemdsystemunitdir')
++endif
++
+ configure_file(
+     input: 'openvpn3-autoload.service.in',
+     output: 'openvpn3-autoload.service',
+     configuration: systemd_cfg,
+     install: true,
+-    install_dir: systemd_service_cfg.get_variable('systemdsystemunitdir'),
++    install_dir: systemd_system_unit_dir,
+ )
+ 
+ configure_file(
+@@ -28,7 +33,7 @@ configure_file(
+     output: 'openvpn3-session@.service',
+     configuration: systemd_cfg,
+     install: true,
+-    install_dir: systemd_service_cfg.get_variable('systemdsystemunitdir'),
++    install_dir: systemd_system_unit_dir,
+ )
+ 
+ custom_target('openvpn3-systemd',
 diff --git a/meson.build b/meson.build
-index 092b4ce..068f1a1 100644
+index 092b4ce..ca555ca 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -180,8 +180,18 @@ message('OpenVPN 3 Linux service binary directory: ' + get_option('prefix') / li
@@ -23,41 +55,69 @@ index 092b4ce..068f1a1 100644
  dbus_config = {
      'OPENVPN_USERNAME': get_option('openvpn_username'),
      'LIBEXEC_PATH': get_option('prefix') / libexec_dir,
-@@ -285,7 +295,7 @@ configure_file(
-     input: 'src/policy/net.openvpn.v3.conf.in',
-     output: 'net.openvpn.v3.conf',
-     configuration: configuration_data(dbus_config),
--    install: true,
-+    install: true, # TODO: pportnov
-     install_dir: dbus_policy_dir,
- )
- 
 diff --git a/meson_options.txt b/meson_options.txt
-index e9e759e..ac73bc3 100644
+index e9e759e..fc0562a 100644
 --- a/meson_options.txt
 +++ b/meson_options.txt
-@@ -81,6 +81,14 @@ option('use-legacy-polkit-pkla', type: 'feature', value: 'disabled',
+@@ -81,6 +81,16 @@ option('use-legacy-polkit-pkla', type: 'feature', value: 'disabled',
  option('polkit_pkla_rulesdir', type: 'string', value: '',
         description: 'Override PolicyKit PKLA rules directory')
  
 +#
-+# DBus-specific paths
++# Installation paths
 +#
 +option('dbuspolicydir', type: 'string',
 +       description: 'D-Bus policy directory')
 +option('dbussystemservicedir', type: 'string',
 +       description: 'D-Bus system service directory')
++option('systemdsystemunitdir', type: 'string',
++       description: 'Path to systemd system unit directory')
 +
  #
  #  Testing tools
  #
 diff --git a/src/configmgr/meson.build b/src/configmgr/meson.build
-index 5d0a649..b534817 100644
+index 5d0a649..447a7bf 100644
 --- a/src/configmgr/meson.build
 +++ b/src/configmgr/meson.build
-@@ -55,4 +55,4 @@ configure_file(
+@@ -55,4 +55,5 @@ configure_file(
  # Create the configs directory for persistent configuration profiles
  # NOTE: Can be replaced with install_emptydir() when Meson 0.60 or newer
  #       is available on all supported distros
 -meson.add_install_script('sh','-c', 'mkdir -p $DESTDIR@0@'.format(openvpn3_statedir / 'configs'))
++meson.add_install_script('sh','-c', 'echo Installing to [$DESTDIR] [$DESTDIR@0@]'.format(openvpn3_statedir / 'configs'))
 +# meson.add_install_script('sh','-c', 'mkdir -p $DESTDIR@0@'.format(openvpn3_statedir / 'configs'))
+diff --git a/src/netcfg/meson.build b/src/netcfg/meson.build
+index 73f4b44..3c4b318 100644
+--- a/src/netcfg/meson.build
++++ b/src/netcfg/meson.build
+@@ -41,7 +41,7 @@ configure_file(
+ 
+ # D-Bus service autostart config
+ configure_file(
+-    input: '../service-autostart/template.service.in',
++    input: '../service-autostart/template.stateful_service.in',
+     output: 'net.openvpn.v3.netcfg.service',
+     configuration: configuration_data(
+         dbus_config +
+diff --git a/src/service-autostart/template.stateful_service.in b/src/service-autostart/template.stateful_service.in
+new file mode 100644
+index 0000000..256cc43
+--- /dev/null
++++ b/src/service-autostart/template.stateful_service.in
+@@ -0,0 +1,15 @@
++#  This file is part of the OpenVPN 3 Linux client
++#
++#  SPDX-License-Identifier: AGPL-3.0-only
++#
++#  Copyright (C)  OpenVPN Inc <sales@openvpn.net>
++#  Copyright (C)  David Sommerseth <davids@openvpn.net>
++#
++
++[Service]
++StateDirectory=openvpn3
++
++[D-BUS Service]
++Name=@BUSNAME@
++User=@OPENVPN_USERNAME@
++Exec=@LIBEXEC_PATH@/@SERVICE_BIN@ @SERVICE_ARGS@

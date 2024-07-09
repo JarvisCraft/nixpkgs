@@ -16,6 +16,7 @@
 , enableSystemdResolved ? false
 , tinyxml-2
 , wrapGAppsHook3 # TODO: do we need it?
+, gobject-introspection
 # begin(pportnov)
 , meson
 , ninja
@@ -38,7 +39,7 @@ stdenv.mkDerivation rec {
     repo = "openvpn3-linux";
     #rev = "v${version}-nixos";
     rev = "62f3536b015ab9f348a2a87e32864cc330709c1a";
-    hash = "sha256-ol2WMkfe8yrK/ICQ2gyDEDwqmpMXWvGRrWANg1uJ03Q=";
+    hash = "sha256-zCklE1jTPLPKiEWUyt0s3T7ivyhBK/1HyR6wf50ED8I=";
     fetchSubmodules = true;
     # This is required to generate version information.
     leaveDotGit = true;
@@ -50,40 +51,36 @@ stdenv.mkDerivation rec {
     ./0003-no-auto-install.patch
   ];
 
-  /*postPatch = ''
-    rm -r ./vendor/googletest
-    cp -r ${gtest.src} ./vendor/googletest
-    rm -r ./openvpn3-core
-    ln -s ${openvpn3-core} ./openvpn3-core
-
-    chmod -R +w ./vendor/googletest
-    shopt -s globstar
-
+  postPatch = ''
     patchShebangs ** /*.py ** /*.sh ./src/python/{openvpn2,openvpn3-as,openvpn3-autoload} \
     ./distro/systemd/openvpn3-systemd ./src/tests/dbus/netcfg-subscription-test
 
-    echo "3.git:v${version}:unknown" > openvpn3-core-version
-  '';*/
+    # echo "3.git:v${version}:unknown" > openvpn3-core-version
+  '';
 
   # TODO(pportnov): do we need it?
   outputs = [ "out" "dev" ];
 
+  pythonPath = python3.withPackages (ps: [
+    ps.dbus-python
+    ps.pygobject3
+    ps.systemd
+  ]);
   nativeBuildInputs = [
-    # begin(pportnov)
     meson
     ninja
     bash
     cmake
-    # breakpointHook
     git
-    # end(pportnov)
 
     python3.pkgs.docutils
     python3.pkgs.jinja2
     pkg-config
     wrapGAppsHook3
+
     python3.pkgs.wrapPython
-  ] ++ pythonPath;
+    gobject-introspection
+  ];
 
   buildInputs = [
     asio
@@ -101,6 +98,8 @@ stdenv.mkDerivation rec {
     systemd
   ];
 
+  # runtime deps
+
   mesonFlags = [
     (lib.mesonOption "selinux" "disabled")
     (lib.mesonOption "selinux_policy" "disabled")
@@ -113,14 +112,9 @@ stdenv.mkDerivation rec {
     (lib.mesonOption "dbuspolicydir" "${placeholder "out"}/share/dbus-1/system.d")
     # (lib.mesonOption "dbussessionservicedir" "${placeholder "out"}/share/dbus-1/services")
     (lib.mesonOption "dbussystemservicedir" "${placeholder "out"}/share/dbus-1/system-services")
-  ];
-
-  # mesonWrapMode = "default";
-
-  # runtime deps
-  pythonPath = with python3.pkgs; [
-    dbus-python
-    pygobject3
+    (lib.mesonOption "systemdsystemunitdir" "${placeholder "out"}/lib/systemd/system")
+    # (lib.mesonOption "openvpn3_statedir" "/var/lib/openvpn3")
+    (lib.mesonOption "sharedstatedir" "/var/lib")
   ];
 
   dontWrapGApps = true;
@@ -129,6 +123,7 @@ stdenv.mkDerivation rec {
   '';
   postFixup = ''
     wrapPythonPrograms
+    wrapPythonProgramsIn "$out/libexec/openvpn3-linux" "$out ${pythonPath}"
   '';
 
   /* `mesonFlags` are used instead
@@ -143,15 +138,6 @@ stdenv.mkDerivation rec {
     "DEFAULT_DNS_RESOLVER=--systemd-resolved"
   ];
   */
-
-  postInstall = ''
-    for i in $out/share/dbus-1/system-services/*.service; do
-      # substituteInPlace $i --replace /bin/false $coreutils/bin/false
-      echo "===== File $i ====="
-      cat $i
-      echo "===== ======= ====="
-    done
-  '';
 
   NIX_LDFLAGS = "-lpthread";
 
