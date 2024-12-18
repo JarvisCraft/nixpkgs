@@ -11,7 +11,10 @@
   gdk-pixbuf,
   glib,
   gnome2,
-  gtk2,
+  gtk3,
+  dbus,
+  harfbuzz,
+  libz,
   libGLU,
   libGL,
   pango,
@@ -48,7 +51,10 @@ stdenv.mkDerivation (finalAttrs: {
       cairo
       gdk-pixbuf
       glib
-      gtk2
+      gtk3
+      dbus
+      harfbuzz
+      libz
       stdenv.cc.cc
       pango
       gnome2.gtkglext
@@ -123,7 +129,9 @@ stdenv.mkDerivation (finalAttrs: {
           lsb-release
           pciutils
         ]
-      }
+      } \
+      --prefix GDK_BACKEND : x11 \
+      --set GTK_THEME Adwaita
   '';
 
   passthru = {
